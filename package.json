@@ -1,0 +1,37 @@
+{
+  "name": "dat-archiver",
+  "version": "0.0.0",
+  "description": "Easily peer multiple Dat archives.",
+  "main": "index.js",
+  "bin": "cli.js",
+  "scripts": {
+    "test": "standard && dependency-check . --unused --entry test.js -i standard -i dependency-check && tap test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/garbados/dat-archiver.git"
+  },
+  "keywords": [
+    "dat"
+  ],
+  "author": "Diana Thayer <garbados@gmail.com>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/garbados/dat-archiver/issues"
+  },
+  "homepage": "https://github.com/garbados/dat-archiver#readme",
+  "devDependencies": {
+    "dependency-check": "^2.9.2",
+    "mock-fs": "^4.4.2",
+    "standard": "^10.0.3",
+    "tap": "^11.0.0"
+  },
+  "dependencies": {
+    "async": "^2.6.0",
+    "dat-link-resolve": "^2.1.0",
+    "dat-node": "^3.5.6",
+    "mkdirp": "^0.5.1",
+    "rimraf": "^2.6.2",
+    "yargs": "^10.0.3"
+  }
+}
