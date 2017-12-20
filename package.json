@@ -22,7 +22,6 @@
   "homepage": "https://github.com/garbados/dat-archiver#readme",
   "devDependencies": {
     "dependency-check": "^2.9.2",
-    "mock-fs": "^4.4.2",
     "standard": "^10.0.3",
     "tap": "^11.0.0"
   },

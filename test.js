@@ -1,30 +1,16 @@
 const async = require('async')
 const tap = require('tap')
-const fsMock = require('mock-fs')
 const Archiver = require('.')
 const pkg = require('./package.json')
 
 const TEST_KEY = 'dat://95a964430e5a5c5203dde674a1873e51f2e8e78995855c1481020f405ee9a772/'
 
-function setup (done) {
-  fsMock({ 'test-folder': {} })
-  done()
-}
-
-function teardown (done) {
-  fsMock.restore()
-  done()
-}
-
 // mock the filesystem
 tap.test([pkg.name, pkg.version].join(' '), (t) => {
-  t.beforeEach(setup)
-  t.afterEach(teardown)
-
   t.test({
     bail: true
   }, (test) => {
-    const archiver = Archiver.create('./test-folder')
+    const archiver = Archiver.create('./test-fixtures')
 
     async.series([
       archiver.start.bind(archiver),
