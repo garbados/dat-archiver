@@ -1,5 +1,5 @@
 {
-  "name": "dat-archiver",
+  "name": "dat-friend",
   "version": "0.0.0",
   "description": "Easily peer multiple Dat archives.",
   "main": "index.js",
