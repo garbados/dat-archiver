@@ -53,7 +53,7 @@ module.exports = class Archiver {
             (dat, done) => {
               this.dats[key] = dat
               dat.joinNetwork()
-              dat.archive.metadata.update(done)
+              done()
             }
           ], done)
         }, done)

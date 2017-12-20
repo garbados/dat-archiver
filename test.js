@@ -1,16 +1,22 @@
 const async = require('async')
 const tap = require('tap')
 const Archiver = require('.')
+const rimraf = require('rimraf')
 const pkg = require('./package.json')
 
 const TEST_KEY = 'dat://95a964430e5a5c5203dde674a1873e51f2e8e78995855c1481020f405ee9a772/'
+const FIXT_DIR = 'test-fixtures'
 
 // mock the filesystem
 tap.test([pkg.name, pkg.version].join(' '), (t) => {
+  t.beforeEach((done) => {
+    rimraf(FIXT_DIR, done)
+  })
+
   t.test({
     bail: true
   }, (test) => {
-    const archiver = Archiver.create('./test-fixtures')
+    const archiver = Archiver.create(FIXT_DIR)
 
     async.series([
       archiver.start.bind(archiver),
