@@ -23,10 +23,15 @@ const rimraf = require('rimraf')
 
 const DIR = path.join(os.homedir(), `.${pkg.name}`)
 
+function _toKey (buf) {
+  return buf.toString('hex')
+}
+
 module.exports = class Archiver {
   constructor (dir = DIR, options = {}) {
     this.dir = path.resolve(dir).replace('~', os.homedir())
     this.emitter = new EventEmitter()
+    this.dats = {}
   }
 
   start (done) {
@@ -42,7 +47,7 @@ module.exports = class Archiver {
         }, done)
       },
       (datKeys, done) => {
-        async.map(datKeys, (key, done) => {
+        async.each(datKeys, (key, done) => {
           async.waterfall([
             Dat.bind(Dat, path.join(this.dir, key), { key }),
             (dat, done) => {
@@ -57,10 +62,15 @@ module.exports = class Archiver {
   }
 
   stop (done) {
-    async.each(Object.keys(this.dats), (key, done) => {
-      let dat = this.dats[key]
-      dat.close(done)
-    }, done)
+    const keys = Object.keys(this.dats)
+    if (keys.length) {
+      async.each(keys, (key, done) => {
+        let dat = this.dats[key]
+        dat.close(done)
+      }, done)
+    } else {
+      done()
+    }
   }
 
   on (event, callback) {
@@ -70,7 +80,8 @@ module.exports = class Archiver {
   get (link, done) {
     async.waterfall([
       datResolve.bind(null, link),
-      (key, done) => {
+      (buf, done) => {
+        let key = _toKey(buf)
         if (key in this.dats) {
           done(null, this.dats[key])
         } else {
@@ -84,7 +95,8 @@ module.exports = class Archiver {
   add (link, done) {
     async.waterfall([
       datResolve.bind(null, link),
-      (key, done) => {
+      (buf, done) => {
+        let key = _toKey(buf)
         if (key in this.dats) {
           done(new Error(`Dat archive is already being peered: ${key}.`))
         } else {
@@ -106,18 +118,22 @@ module.exports = class Archiver {
   remove (link, done) {
     async.waterfall([
       datResolve.bind(null, link),
-      (key, done) => {
+      (buf, done) => {
+        let key = _toKey(buf)
         let dat = this.dats[key]
-        this.emit('remove', key)
-        delete this.dats[key]
-        async.parallel([
-          dat.close.bind(dat),
-          rimraf.bind(null, path.join(this.dir, key))
-        ], (err) => {
-          if (err) return done(err)
-          this.emitter.emit('remove', key)
+        if (dat) {
+          delete this.dats[key]
+          async.series([
+            dat.close.bind(dat),
+            rimraf.bind(rimraf, path.join(this.dir, key))
+          ], (err) => {
+            if (err) return done(err)
+            this.emitter.emit('remove', key)
+            done()
+          })
+        } else {
           done()
-        })
+        }
       }
     ], done)
   }
@@ -133,7 +149,7 @@ module.exports = class Archiver {
           })
         }, done)
       }
-    ])
+    ], done)
   }
 
   static create (dir, options) {
