@@ -1,7 +1,7 @@
 language: node_js
 node_js:
-- '0.11'
-- '0.10'
+- 6
+- 8
 env:
   global:
     secure: sDgMxrOumnpRcg/pXXPjzQ295m5Bsdrlb7uW67xMDw9TinM3KNdaSSC74gC//cvpwHbcra6UBYGFfcHu8pKa7+98s4FFSw5j29aZJJghkBimq+K4mL+wH/nCmkcj2Qun4g1H0xSdSTZEqFYXi+u5PHBNVffbOEghe9raer8JA2hYAsM9I6BF+d6ZlFFIswQCWJWJymATPZ0O+0bkWeTI3xlpClIAhOddpqYqk0dDcUfs90OvVEZr2SX2cQNmvCe2jQeiVObVy4ZY/0SRJRV41f7DAvIOAgcxecYMceuBkq3xKZTyBis62XKfN/7M+xAhVZp8k1uXKKIkrLUbqWdzZ4+kSPlzqTr+yUQ/49G6lobbwob5A+Uqz80MQ1AZRKwAWn3tkeGM3bdT1pyGOuOiBw7FaoxwmMxTjEqTSvSxDHSK43rLlKy8iA+FzxnbTSIsIvd3LTnFl5IufvYliv6CERKTM+/Slhp8Iou4/jDnnjPEfk4W6bJ5CMgGCwfvE5KU01JSgkjz+9y2Mwj5YNJDSbQeg1asBwCp3N3zQk0UIBIvSv84t6/N4P9H6ey05q4C3lE047VChIIgjPk/nNJx1lpoTgmsqURpy5F6HJ0ncl5T6FrANGJvoe8IVe/W0XsigBduO8BPuogjn6kimjlRUyUNMsNSl9n6mQtzZEYPpuU=
