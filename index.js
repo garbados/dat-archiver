@@ -20,8 +20,12 @@ const os = require('os')
 const path = require('path')
 const pkg = require('./package.json')
 const rimraf = require('rimraf')
+const _ = require('lodash')
 
 const DIR = path.join(os.homedir(), `.${pkg.name}`)
+const DAT_OPTIONS = {
+  live: true
+}
 
 function _toKey (buf) {
   return buf.toString('hex')
@@ -32,6 +36,8 @@ module.exports = class Archiver {
     this.dir = path.resolve(dir).replace('~', os.homedir())
     this.emitter = new EventEmitter()
     this.dats = {}
+    this.datOptions = _.extend(DAT_OPTIONS, options.dat)
+    this.netOptions = options.net || {}
   }
 
   start (done) {
@@ -49,14 +55,25 @@ module.exports = class Archiver {
       (datKeys, done) => {
         async.each(datKeys, (key, done) => {
           async.waterfall([
-            Dat.bind(Dat, path.join(this.dir, key), { key }),
+            Dat.bind(Dat, path.join(this.dir, key), _.extend(this.datOptions, { key })),
             (dat, done) => {
               this.dats[key] = dat
-              dat.joinNetwork()
+              dat.network = dat.joinNetwork(this.netOptions)
               done()
             }
           ], done)
         }, done)
+      },
+      (done) => {
+        Dat(this.dir, this.datOptions, (err, dat) => {
+          if (err) return done(err)
+          this.dat = dat
+          dat.importFiles((err) => {
+            if (err) return done(err)
+            dat.network = dat.joinNetwork(this.netOptions)
+            done()
+          })
+        })
       }
     ], done)
   }
@@ -64,10 +81,17 @@ module.exports = class Archiver {
   stop (done) {
     const keys = Object.keys(this.dats)
     if (keys.length) {
-      async.each(keys, (key, done) => {
-        let dat = this.dats[key]
-        dat.close(done)
-      }, done)
+      async.parallel([
+        (done) => {
+          this.dat.close(done)
+        },
+        (done) => {
+          async.each(keys, (key, done) => {
+            let dat = this.dats[key]
+            dat.close(done)
+          }, done)
+        }
+      ], done)
     } else {
       done()
     }
@@ -101,12 +125,13 @@ module.exports = class Archiver {
           done(new Error(`Dat archive is already being peered: ${key}.`))
         } else {
           let dir = path.join(this.dir, key)
-          Dat(dir, { key }, done)
+          let opts = _.extend(this.datOptions, { key })
+          Dat(dir, opts, done)
         }
       },
       (dat, done) => {
         this.dats[dat.key] = dat
-        dat.joinNetwork()
+        dat.joinNetwork(this.netOptions)
         dat.archive.metadata.update(() => {
           this.emitter.emit('add', dat.key)
           done()
@@ -150,6 +175,10 @@ module.exports = class Archiver {
         }, done)
       }
     ], done)
+  }
+
+  get key () {
+    return this.dat.key
   }
 
   static create (dir, options) {
