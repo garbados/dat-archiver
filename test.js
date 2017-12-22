@@ -2,12 +2,17 @@ const async = require('async')
 const tap = require('tap')
 const Archiver = require('.')
 const rimraf = require('rimraf')
-const pkg = require('./package.json')
 
 const TEST_KEY = 'dat://95a964430e5a5c5203dde674a1873e51f2e8e78995855c1481020f405ee9a772/'
 const FIXT_DIR = 'test-fixtures'
 
-tap.test([pkg.name, pkg.version].join(' '), (t) => {
+const OPTIONS = {
+  dat: {
+    live: false
+  }
+}
+
+tap.test((t) => {
   t.beforeEach((done) => {
     rimraf(FIXT_DIR, done)
   })
@@ -19,7 +24,7 @@ tap.test([pkg.name, pkg.version].join(' '), (t) => {
   t.test({
     bail: true
   }, (test) => {
-    const archiver = Archiver.create(FIXT_DIR)
+    const archiver = Archiver.create(FIXT_DIR, OPTIONS)
 
     async.series([
       archiver.start.bind(archiver),
@@ -47,14 +52,19 @@ tap.test([pkg.name, pkg.version].join(' '), (t) => {
     })
   })
 
-  t.test({
-    bail: true
-  }, (test) => {
-    const archiver = Archiver.create(FIXT_DIR)
+  t.test((test) => {
+    const archiver = Archiver.create(FIXT_DIR, OPTIONS)
 
     async.series([
       archiver.add.bind(archiver, TEST_KEY),
       archiver.start.bind(archiver),
+      (done) => {
+        archiver.add(TEST_KEY, (err) => {
+          test.ok(err)
+          test.ok(err.message.indexOf('already being peered') > -1)
+          done()
+        })
+      },
       archiver.stop.bind(archiver)
     ], (err) => {
       test.error(err)

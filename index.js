@@ -21,6 +21,7 @@ const path = require('path')
 const pkg = require('./package.json')
 const rimraf = require('rimraf')
 const _ = require('lodash')
+const debug = require('debug')(pkg.name)
 
 const DIR = path.join(os.homedir(), `.${pkg.name}`)
 const DAT_OPTIONS = {
@@ -33,6 +34,7 @@ function _toKey (buf) {
 
 module.exports = class Archiver {
   constructor (dir = DIR, options = {}) {
+    debug('constructor', dir, options)
     this.dir = path.resolve(dir).replace('~', os.homedir())
     this.emitter = new EventEmitter()
     this.dats = {}
@@ -41,61 +43,75 @@ module.exports = class Archiver {
   }
 
   start (done) {
+    debug('start')
     mkdirp.sync(this.dir)
-    async.waterfall([
-      fs.readdir.bind(fs, this.dir),
-      (dirNames, done) => {
-        async.filter(dirNames, (dirName, done) => {
-          datResolve(dirName, (err, key) => {
-            if (err) return done()
-            done(null, key)
-          })
-        }, done)
-      },
-      (datKeys, done) => {
-        async.each(datKeys, (key, done) => {
-          async.waterfall([
-            Dat.bind(Dat, path.join(this.dir, key), _.extend(this.datOptions, { key })),
-            (dat, done) => {
-              this.dats[key] = dat
-              dat.network = dat.joinNetwork(this.netOptions)
-              done()
-            }
-          ], done)
-        }, done)
+    async.parallel([
+      (done) => {
+        async.waterfall([
+          fs.readdir.bind(fs, this.dir),
+          (dirNames, done) => {
+            async.filter(dirNames, (dirName, done) => {
+              datResolve(dirName, (err, key) => {
+                if (err) return done()
+                done(null, key)
+              })
+            }, done)
+          },
+          (datKeys, done) => {
+            async.each(datKeys, (key, done) => {
+              async.waterfall([
+                Dat.bind(Dat, path.join(this.dir, key), _.extend(this.datOptions, { key })),
+                (dat, done) => {
+                  this.dats[key] = dat
+                  dat.joinNetwork(this.netOptions)
+                  dat.network.on('listening', () => {
+                    done()
+                  })
+                }
+              ], done)
+            }, done)
+          }
+        ], done)
       },
       (done) => {
-        Dat(this.dir, this.datOptions, (err, dat) => {
-          if (err) return done(err)
-          this.dat = dat
-          dat.joinNetwork(this.netOptions)
-          done()
-        })
+        async.waterfall([
+          Dat.bind(Dat, this.dir, this.datOptions),
+          (dat, done) => {
+            this.dat = dat
+            dat.joinNetwork(this.netOptions)
+            done()
+          }
+        ], done)
       }
     ], done)
   }
 
   stop (done) {
+    const close = (dat, done) => {
+      async.parallel([
+        dat.close.bind(dat),
+        dat.leave.bind(dat)
+      ], done)
+    }
+    debug('stop')
     const keys = Object.keys(this.dats)
     var tasks = [(done) => {
-      this.dat.close(done)
+      debug('stopping root dat')
+      close(this.dat, done)
     }]
     if (keys.length) {
       tasks.push((done) => {
         async.each(keys, (key, done) => {
-          let dat = this.dats[key]
-          dat.close(done)
+          debug(`stopping ${key}`)
+          close(this.dats[key], done)
         }, done)
       })
     }
     async.parallel(tasks, done)
   }
 
-  on (event, callback) {
-    return this.emitter.on(event, callback)
-  }
-
   get (link, done) {
+    debug(`get ${link}`)
     async.waterfall([
       datResolve.bind(null, link),
       (buf, done) => {
@@ -111,6 +127,7 @@ module.exports = class Archiver {
   }
 
   add (link, done) {
+    debug(`add ${link}`)
     async.waterfall([
       datResolve.bind(null, link),
       (buf, done) => {
@@ -132,14 +149,15 @@ module.exports = class Archiver {
       (dat, done) => {
         let key = dat.key.toString('hex')
         this.dats[key] = dat
-        dat.joinNetwork(this.netOptions)
         this.emitter.emit('add', key)
+        dat.joinNetwork(this.netOptions)
         done()
       }
     ], done)
   }
 
   remove (link, done) {
+    debug(`remove ${link}`)
     async.waterfall([
       datResolve.bind(null, link),
       (buf, done) => {
@@ -163,6 +181,7 @@ module.exports = class Archiver {
   }
 
   list (done) {
+    debug(`list`)
     async.waterfall([
       fs.readdir.bind(fs, this.dir),
       (dirNames, done) => {
