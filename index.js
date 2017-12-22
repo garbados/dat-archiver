@@ -68,11 +68,8 @@ module.exports = class Archiver {
         Dat(this.dir, this.datOptions, (err, dat) => {
           if (err) return done(err)
           this.dat = dat
-          dat.importFiles((err) => {
-            if (err) return done(err)
-            dat.network = dat.joinNetwork(this.netOptions)
-            done()
-          })
+          dat.joinNetwork(this.netOptions)
+          done()
         })
       }
     ], done)
@@ -80,21 +77,18 @@ module.exports = class Archiver {
 
   stop (done) {
     const keys = Object.keys(this.dats)
+    var tasks = [(done) => {
+      this.dat.close(done)
+    }]
     if (keys.length) {
-      async.parallel([
-        (done) => {
-          this.dat.close(done)
-        },
-        (done) => {
-          async.each(keys, (key, done) => {
-            let dat = this.dats[key]
-            dat.close(done)
-          }, done)
-        }
-      ], done)
-    } else {
-      done()
+      tasks.push((done) => {
+        async.each(keys, (key, done) => {
+          let dat = this.dats[key]
+          dat.close(done)
+        }, done)
+      })
     }
+    async.parallel(tasks, done)
   }
 
   on (event, callback) {
@@ -126,16 +120,21 @@ module.exports = class Archiver {
         } else {
           let dir = path.join(this.dir, key)
           let opts = _.extend(this.datOptions, { key })
-          Dat(dir, opts, done)
+          async.series([
+            mkdirp.bind(mkdirp, dir),
+            Dat.bind(Dat, dir, opts)
+          ], (err, result) => {
+            if (err) return done(err)
+            done(null, result[1])
+          })
         }
       },
       (dat, done) => {
-        this.dats[dat.key] = dat
+        let key = dat.key.toString('hex')
+        this.dats[key] = dat
         dat.joinNetwork(this.netOptions)
-        dat.archive.metadata.update(() => {
-          this.emitter.emit('add', dat.key)
-          done()
-        })
+        this.emitter.emit('add', key)
+        done()
       }
     ], done)
   }

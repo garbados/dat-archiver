@@ -8,6 +8,10 @@ const TEST_KEY = 'dat://95a964430e5a5c5203dde674a1873e51f2e8e78995855c1481020f40
 const FIXT_DIR = 'test-fixtures'
 
 tap.test([pkg.name, pkg.version].join(' '), (t) => {
+  t.beforeEach((done) => {
+    rimraf(FIXT_DIR, done)
+  })
+
   t.afterEach((done) => {
     rimraf(FIXT_DIR, done)
   })
@@ -36,6 +40,21 @@ tap.test([pkg.name, pkg.version].join(' '), (t) => {
         })
       },
       archiver.remove.bind(archiver, TEST_KEY),
+      archiver.stop.bind(archiver)
+    ], (err) => {
+      test.error(err)
+      test.end()
+    })
+  })
+
+  t.test({
+    bail: true
+  }, (test) => {
+    const archiver = Archiver.create(FIXT_DIR)
+
+    async.series([
+      archiver.add.bind(archiver, TEST_KEY),
+      archiver.start.bind(archiver),
       archiver.stop.bind(archiver)
     ], (err) => {
       test.error(err)
